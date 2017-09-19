@@ -369,6 +369,14 @@ class Limiter(object):
             "%s.%s" % (view_func.__module__, view_func.__name__)
             if view_func else ""
         )
+        # [hack] ADS
+        # When using ProxyView to talk to remote microservices via HTTP,
+        # flask limiter is not able to register the real endpoint and all
+        # limits are applied to all ProxyViewer requests. To avoid this,
+        # we append the route to the common module.name.
+        if name == "adsws.api.discoverer.views.dispatcher":
+            name += endpoint
+        # [/hack]
         if (not request.endpoint
             or not self.enabled
             or view_func == current_app.send_static_file
@@ -501,6 +509,15 @@ class Limiter(object):
             name = "%s.%s" % (
                 obj.__module__, obj.__name__
             ) if is_route else obj.name
+            # [hack]
+            # When using ProxyView to talk to remote microservices via HTTP,
+            # flask limiter is not able to register the real endpoint and all
+            # limits are applied to all ProxyViewer requests. To avoid this,
+            # we append the route to the common module.name.
+            if name == "adsws.api.discoverer.views.dispatcher" \
+                    and hasattr(obj, 'im_self') and obj.im_self is not None:
+                name += obj.im_self.route
+            # [/hack]
             dynamic_limit, static_limits = None, []
             if callable(limit_value):
                 dynamic_limit = LimitGroup(
